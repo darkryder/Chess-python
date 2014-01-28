@@ -1,0 +1,1 @@
+This is an in-development chess game written in python and finally it would contain multiplayer support(global) as well as hopelfully AI(not random).
