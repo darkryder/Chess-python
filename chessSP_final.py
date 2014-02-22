@@ -1302,7 +1302,7 @@ while done == False:
 	if gamewon:
 		time.sleep(3)
 		done=True
-	print clock.get_fps()
+	# print clock.get_fps()
 	clock.tick(60)	
 
 # Close the window and quit.
