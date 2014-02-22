@@ -1,3 +1,10 @@
+###################################################################
+#	Created by: Sambhav Satija
+#	Alias: Dark Ryder
+#	For: Introduction to Programming Final Project Submission
+#	Date: November, 2013
+#	Insititute: IIIT-D
+###################################################################
 
 #---------------------!!----------------Initialisation----------------------!!---------------------------#
 import pygame
