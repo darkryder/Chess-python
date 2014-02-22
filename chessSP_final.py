@@ -17,10 +17,11 @@ clock = pygame.time.Clock()
 
 done = False
 gamewon=0
+"""
 import time
 time_change_var=time.asctime().split()[3].split(":")[2]
 time_elapsed=0
-
+"""
 
 
 killcount_wp=0
@@ -33,6 +34,16 @@ killcount_bb=0
 killcount_br=0
 killcount_bk=0
 killcount_bq=0
+
+
+
+"""
+I had to implement the function to keep a track of the pieces killed. 
+As the inbuilt check function of the pieces automatically kill the opponents 
+piece. It was the easiest way to implement the feature of keeping a 
+track of the killed pieces without changing a huge amount of code.
+"""
+
 def killcount(piece,kill=True):
 	global killcount_wp
 	global killcount_wb
@@ -91,20 +102,6 @@ def killcount(piece,kill=True):
 			if piece.type==5:
 				killcount_wq-=1
 
-# def kingcheck():
-# 	global checked_check_king
-# 	global legal_moves_dict
-# 	global kingischecked
-# 	if not checked_check_king:
-# 		for a,b in legal_moves_dict.iteritems():
-# 				kingischecked=((wking.x,wking.y) in b) or kingischecked
-# 		if kingischecked:
-# 			kingischecked=2
-# 		else:
-# 			for a,b in legal_moves_dict.iteritems():
-# 				kingischecked=((bking.x,bking.y) in b)or kingischecked
-# 			if kingischecked: kingischecked=1
-# 	checked_check_king=True
 
 #-----------------!!-------------classes for all pieces--------------!!-------------------#
 
@@ -115,7 +112,7 @@ def cd(x,y):	#takes input as coordinate number of box and outputs the required p
 		return ((x-1)*80,(y-1)*80)	
 
 	
-class WhitePawn(object):		#"""fixed"""		#ALL CLASSES HAVE ATTRIBUTES AND REQUIRED LOGICS
+class WhitePawn(object):				#ALL CLASSES HAVE ATTRIBUTES AND REQUIRED LOGICS
 		n=1
 		def __init__(self):
 			self.name=int("1"+str(WhitePawn.n)+"1")
@@ -155,7 +152,7 @@ class WhitePawn(object):		#"""fixed"""		#ALL CLASSES HAVE ATTRIBUTES AND REQUIRE
 			else:
 				return -1
 
-class BlackPawn(object):		#"""fixed"""		#OF NAME, COLOUR, TYPE, SURVIVE, X,Y, IMAGE SOURCE
+class BlackPawn(object):		#ALL CLASSES HAVE ATTRIBUTES OF NAME, COLOUR, TYPE, SURVIVE, X,Y, IMAGE SOURCE
 		n=1
 		def __init__(self):
 			self.name=int("1"+str(BlackPawn.n)+"0")
@@ -194,7 +191,7 @@ class BlackPawn(object):		#"""fixed"""		#OF NAME, COLOUR, TYPE, SURVIVE, X,Y, IM
 			else:
 				return -1
 
-class BlackBishop(object):		#fixed
+class BlackBishop(object):		
 		n=1
 		def __init__(self):
 			self.name=int("2"+str(BlackBishop.n)+"0")
@@ -271,7 +268,7 @@ class BlackBishop(object):		#fixed
 			else:
 				return -1
 
-class WhiteBishop(object):		#"""fixed"""
+class WhiteBishop(object):		
 		n=1
 		def __init__(self):
 			self.name=int("2"+str(WhiteBishop.n)+"1")
@@ -348,7 +345,7 @@ class WhiteBishop(object):		#"""fixed"""
 			else:
 				return -1
 
-class BlackRook(object):		#"""fixed"""
+class BlackRook(object):		
 		n=1
 		def __init__(self):
 			self.name=int("3"+str(BlackRook.n)+"0")
@@ -444,7 +441,7 @@ class BlackRook(object):		#"""fixed"""
 			else:
 				return 0
 
-class WhiteRook(object):		#"""fixed"""
+class WhiteRook(object):		
 		n=1
 		def __init__(self):
 			self.name=int("3"+str(WhiteRook.n)+"1")
@@ -540,7 +537,7 @@ class WhiteRook(object):		#"""fixed"""
 			else:
 				return 0
 
-class BlackKnight(object):		#"""fixed"""
+class BlackKnight(object):		
 		n=1
 		def __init__(self):
 			self.name=int("4"+str(BlackKnight.n)+"0")
@@ -575,7 +572,7 @@ class BlackKnight(object):		#"""fixed"""
 			else:
 				return 0
 
-class WhiteKnight(object):		#"""fixed"""
+class WhiteKnight(object):		
 		n=1
 		def __init__(self):
 			self.name=int("4"+str(WhiteKnight.n)+"1")
@@ -610,7 +607,7 @@ class WhiteKnight(object):		#"""fixed"""
 			else:
 				return 0
 					
-class BlackQueen(object):		#"""fixed"""
+class BlackQueen(object):		
 		n=1
 		def __init__(self):
 			self.name=int("5"+str(BlackQueen.n)+"0")
@@ -757,7 +754,7 @@ class BlackQueen(object):		#"""fixed"""
 			else:
 				return 0
 		
-class WhiteQueen(object):		#fixed
+class WhiteQueen(object):		
 		n=1
 		def __init__(self):
 			self.name=int("5"+str(WhiteQueen.n)+"1")
@@ -905,7 +902,7 @@ class WhiteQueen(object):		#fixed
 			else:
 				return 0
 
-class BlackKing(object):		#"""fixed"""
+class BlackKing(object):		
 		def __init__(self):
 			self.name=610
 			self.colour = 0
@@ -944,7 +941,7 @@ class BlackKing(object):		#"""fixed"""
 			else:
 				return 0
 
-class WhiteKing(object):		#"""fixed"""
+class WhiteKing(object):		
 		def __init__(self):
 			self.name=611
 			self.colour = 1
@@ -999,94 +996,68 @@ wq1=WhiteQueen()															#
 bking=BlackKing()															#
 wking=WhiteKing()															#
 
+#pieces in play is list of all the pieces alive.
 pieces_in_play=[wp1,wp2,wp3,wp4,wp5,wp6,wp7,wp8,bp1,bp2,bp3,bp4,bp5,bp6,bp7,bp8,bb1,bb2,wb1,wb2,br1,br2,wr1,wr2,bk1,bk2,wk1,wk2,bq1,wq1,bking,wking]
 
-t_x = 0
-x1=0
+t_x = 0				# CHECK IF THE "SACRIFICE PAWN FOR A NEW PIECE" EVENT IS TRIGGERED
+x1=0 				#co-ordinate inputs from mouse
 y1=0
 x2=0
-col=1
+col=1 				#Current colour which has to make a move
 X1=0
 Y1=0
-m=[]
+m=[] 				#stores current co-ordinate inputs from mouse until its not recieved 2 valid inputs
 moves=[]
 
-legal_moves_refreshed=0
+legal_moves_refreshed=0 	#bool
 
 
 
 # -------- Main Program Loop -----------
 while done == False:
 	
-	# f=0
-	# sent = 0												#--networking attribute.
-	# recieved = 0											#--networking attribute.
 	screen.fill(black)
 	
 	
-	# senddata=0
-	input_read=0
-	
+	input_read=0	
 	
 	if len(m)==4:
-		X1=m[0]
+		X1=m[0]							#assigning final inputs
 		Y1=m[1]
 		X2=m[2]
 		Y2=m[3]
-		m=[]
+		m=[] 							# empty the buffer input list
 		input_read=1
-	# for event in pygame.event.get(): 			# User did something
-	# 	if event.type == pygame.QUIT: 			# If user clicked close
-	# 		done = True 						# exit this loop
-	# 	if event.type ==  pygame.MOUSEBUTTONDOWN:
-	# 		if len(m)==2:
-	# 			if event.button==1:
-	# 				x1,y1=-1,-1
-	# 				pos = pygame.mouse.get_pos()
-	# 				x2 = pos[0]/80+1                                            #
-	# 				y2 = pos[1]/80+1
-	# 				m += [x2] + [y2]
-	# 				moves=[]
+
+	if not input_read:								
+		event=pygame.event.wait()					# User did something
+		if event.type == pygame.QUIT: 				# If user clicked close
+			done = True 							# exit this loop
+		if event.type ==  pygame.MOUSEBUTTONDOWN:	#taking input
+			if len(m)==2:
+				if event.button==1:
+					x1,y1=-1,-1
+					pos = pygame.mouse.get_pos()	
+					x2 = pos[0]/80+1                                            #
+					y2 = pos[1]/80+1
+					m += [x2] + [y2]
+					moves=[]
 					
-	# 		else:
-	# 			if event.button==1:
-	# 				pos = pygame.mouse.get_pos()
-	# 				x1 = pos[0]/80+1
-	# 				y1 = pos[1]/80+1
-	# 				for elements in pieces_in_play:
-	# 					if x1 == elements.x and y1 == elements.y:
-	# 						if elements.colour==col:
-	# 							f=elements
-	# 							m += [x1] + [y1]
-								
-	event=pygame.event.wait()			# User did something
-	if event.type == pygame.QUIT: 			# If user clicked close
-		done = True 						# exit this loop
-	if event.type ==  pygame.MOUSEBUTTONDOWN:
-		if len(m)==2:
-			if event.button==1:
-				x1,y1=-1,-1
-				pos = pygame.mouse.get_pos()
-				x2 = pos[0]/80+1                                            #
-				y2 = pos[1]/80+1
-				m += [x2] + [y2]
-				moves=[]
-				
-		else:
-			if event.button==1:
-				pos = pygame.mouse.get_pos()
-				x1 = pos[0]/80+1
-				y1 = pos[1]/80+1
-				for elements in pieces_in_play:
-					if x1 == elements.x and y1 == elements.y:
-						if elements.colour==col:
-							f=elements
-							m += [x1] + [y1]
+			else:
+				if event.button==1:
+					pos = pygame.mouse.get_pos()
+					x1 = pos[0]/80+1
+					y1 = pos[1]/80+1
+					for elements in pieces_in_play:
+						if x1 == elements.x and y1 == elements.y:
+							if elements.colour==col:
+								f=elements
+								m += [x1] + [y1]
 
 
 
 
-	for a in range(0,481,160):
+	for a in range(0,481,160):									#Creates the chess background.
 		for y in range(0,481,160):
 			pygame.draw.rect(screen, white, [a,y,80,80])
 	for a in range(80,561,160):
@@ -1095,31 +1066,29 @@ while done == False:
 	
 	
 	
-	pygame.draw.rect(screen,red,[cd(x1,y1)[0],cd(x1,y1)[1],80,80],5)
+	pygame.draw.rect(screen,red,[cd(x1,y1)[0],cd(x1,y1)[1],80,80],5)	 	# creates the boundary of currently selected piece
 
 	if not legal_moves_refreshed:										# keeps a track of all the moves allowed by all the pieces
 		legal_moves_dict={}			
-		# kingischecked=0													# used for showing legal moves
 		for p in pieces_in_play:
 			tem=[]
 			for x_temp in range(1,9):
 				for y_temp in range(1,9):
 					try:
-						if p.check(p.x,p.y,x_temp,y_temp):
+						if p.check(p.x,p.y,x_temp,y_temp):				#checks if it is possible for the player to move at all the locations and stores all the locations
 							if (p.x,p.y)!=(x_temp,y_temp):
 								tem+=[(x_temp,y_temp)]
 								for a in pieces_in_play:
-									if (a.x,a.y)==(x_temp,y_temp):
+									#if it is possible to kill the other opponent. My function automatically kills the opponent while checking for valid moves. 
+									#Hence I had to make the kill_count function to ensure that the opponent stays alive even 
+									#when his box is checked for a possible move.
+									if (a.x,a.y)==(x_temp,y_temp):		
 										a.survive=1
 										killcount(a,kill=False)
 					except ZeroDivisionError:
 						pass
 			legal_moves_dict[p]=tem
-		# for a,b in legal_moves_dict.iteritems():
-		# 	print a,b
 		legal_moves_refreshed=1		
-		# checked_check_king=False
-		# kingcheck()
 		
 
 	if input_read==1:
@@ -1133,14 +1102,16 @@ while done == False:
 			
 			
 		if move==1:
-			if f.check(X1,Y1,X2,Y2):
+			if f.check(X1,Y1,X2,Y2):						#MOVES THE PIECE TO NEW LOCATION AFTER CHECKING LEGAL MOVE
+			# if (X2,Y2) in legal_moves_dict[f]:				
 				f.x=X2
 				f.y=Y2
-				# senddata=1
 				if col==0: col=1
 				else: col=0
 				legal_moves_refreshed=0
 		
+
+		#CHECKS FOR THE "sacrifice pawn for other piece" EVENT
 		if f.type==1 and f.y==8 and f.colour==1:
 			t_x = 1
 			f.survive=0
@@ -1164,7 +1135,7 @@ while done == False:
 		screen.blit(element.image,(cd(element.x,element.y)[0],cd(element.x,element.y)[1]))		#    THE SCREEN
 	
 
-
+	#You have to KILL the king to win the game
 	if bking not in pieces_in_play:
 		pygame.draw.rect(screen,black,[160,240,320,160])
 		screen.blit(wking.image,(280,320))
@@ -1179,7 +1150,7 @@ while done == False:
 		screen.blit(text, [220, 265])
 		gamewon=True
 
-
+	#sacrifice pawn event
 	if t_x == 1:
 		if not gamewon:
 			pygame.draw.rect(screen,(100,50,25),[160,240,320,160])
@@ -1247,7 +1218,7 @@ while done == False:
 		moves=[]
 		moves=legal_moves_dict[f]
 		for validmoves in moves:
-			# print validmoves
+			# prints a boundary over the boxes where moves are possible.
 			pygame.draw.rect(screen,blue,[cd(validmoves[0],validmoves[1])[0],cd(validmoves[0],validmoves[1])[1],80,80],4)
 
 
@@ -1283,26 +1254,22 @@ while done == False:
 	screen.blit(wq1.image,(775,400))
 	screen.blit(font.render("%d"%killcount_wq,True,black),[760,420])
 
-	time_change_check=time.asctime().split()[3].split(":")[2]								# shows timer
+	# shows timer
+	"""
+	time_change_check=time.asctime().split()[3].split(":")[2]								
 	if time_change_var!=time_change_check:
 		time_elapsed+=1
 		time_change_var=time_change_check
 	time_elapsed_print=font.render("%d:%d"%(time_elapsed/60,time_elapsed%60),True,white)
 	screen.blit(time_elapsed_print,[730,600])
 	screen.blit(font.render("Time Elapsed",True,black),[660,565])
-	# if kingischecked==1:
-	#  	screen.blit(font.render("Black Checked",True,black),[650,500])
-	# if kingischecked==2:
-	# 	screen.blit(font.render("White Checked",True,black),[650,500])
-
-		
+	"""
 		
 	pygame.display.flip()
 
 	if gamewon:
 		time.sleep(3)
 		done=True
-	# print clock.get_fps()
 	clock.tick(60)	
 
 # Close the window and quit.
