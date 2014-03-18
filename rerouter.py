@@ -10,7 +10,7 @@ SocketsToTrack = []
 
 serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
-PORT = 2440
+PORT = 2441
 NETWORK_REACH = '0.0.0.0'
 LISTEN_LIMIT = 50						#How many clients can it handle
 RECV_BUFFER = 8192
@@ -41,32 +41,35 @@ while 1:
 				
 				SocketsToTrack.append(clientSocket)
 				PlayersInQueue[clientName] = (clientSocket,clientAddress)
+				SendPlayerList(clientSocket)
+
+				for s in SocketsToTrack:
+					if s != serverSocket and s != clientSocket:
+						s.send("ADD+%s"%clientName)
 
 			else:
 				temp = s.recv(RECV_BUFFER)
 				
-				if temp.split()[0] == "EXIT":
-					SocketsToTrack.remove(PlayersInQueue[temp.split()[1]][0])
-					del PlayersInQueue[temp.split()[1]]
+				if temp.split('+')[0] == "EXIT":
+					SocketsToTrack.remove(PlayersInQueue[temp.split('+')[1]][0])
+					del PlayersInQueue[temp.split('+')[1]]
+					for socket in SocketsToTrack:
+						if socket != serverSocket:
+							socket.send("REMOVE+%s"%temp.split('+')[1])
 				
-				elif temp == "REFRESH":
-					#send the player all the current players
-					SendPlayerList(s)
-
-				elif temp.split()[0] == "CHALLENGE":
+				
+				elif temp.split('+')[0] == "CHALLENGE":
 					uid = time.time()
-					user1 = temp.split()[1]
-					user2 = temp.split()[2]
+					[user1,user2] = temp.split('+')[1:]
 					
-					PlayersInQueue[user1][0].send( "SERVER %s %s" % (PlayersInQueue[user2][1],str(uid)) )
-					PlayersInQueue[user2][0].send( "CLIENT %s %s" % (PlayersInQueue[user1][1],str(uid)) )
+					PlayersInQueue[user1][0].send( "SERVER+%s+%s" % (PlayersInQueue[user2][1],str(uid)) )
+					PlayersInQueue[user2][0].send( "CLIENT+%s+%s" % (PlayersInQueue[user1][1],str(uid)) )
 					
 					del PlayersInQueue[user1]
 					del PlayersInQueue[user2]
 					
 					PlayersCurrentlyPlaying[user1] = (user2,str(uid))
 					PlayersCurrentlyPlaying[user2] = (user1,str(uid))
-
 
 	except:
 		serverSocket.close()

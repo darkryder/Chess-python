@@ -2,11 +2,14 @@ import sys
 from PyQt4 import QtGui,QtCore
 import socket
 from functools import partial
+from time import sleep
+import select
 
 NAME = sys.argv[1]
 
 SERVER = '127.0.0.1'
-PORT = 2440
+PORT = 2441
+RECV_BUFFER = 8192
 
 selfSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 selfSocket.connect((SERVER, PORT))
@@ -15,72 +18,117 @@ selfSocket.send(NAME)
 
 class mainClientWindow(QtGui.QWidget):
 
-	def getAndPrintPlayersName(self):
-		for p in self.playerNamesObjects:
-			p.hide()
+    def addPlayer(self,name):
 
-		p = []
-		PlayersHeadingLabel = QtGui.QLabel('Players online',self)
-		PlayersHeadingLabel.setAlignment(QtCore.Qt.AlignCenter)
-		self.mainVbox.addWidget(PlayersHeadingLabel)
+        try:
+            # if name!=NAME:
+            a = self.playerNamesObjects[name]
+            a[2].setEnabled(1)
+            a[2].setText("Challenge !!")
+        except KeyError:
+            self.hbox = QtGui.QHBoxLayout()
 
-		RefreshButton = QtGui.QPushButton("Refresh Players",self)
-		self.mainVbox.addWidget(RefreshButton)
-		RefreshButton.clicked.connect(self.refresh)
+            self.playerName = QtGui.QLabel(name,self)
+            self.playerName.setAlignment(QtCore.Qt.AlignCenter)
+            self.hbox.addWidget(self.playerName)
 
-		self.playerNamesObjects.extend([PlayersHeadingLabel,RefreshButton])
+            self.spacer = QtGui.QLabel("",self)
+            self.hbox.addWidget(self.spacer)
 
-		new = selfSocket.recv(8192)
+            if name == NAME:
+                self.challengeButton = QtGui.QPushButton("Can't challenge yourself.")
+                self.challengeButton.setDisabled(1)
+            else:
+                self.challengeButton = QtGui.QPushButton("Challenge !!")
+                self.challengeButton.clicked.connect(partial(self.challenge, name))
+            self.hbox.addWidget(self.challengeButton)
+            self.mainVbox.addLayout(self.hbox)
+            self.playerNamesObjects[name] = (self.hbox,self.playerName,self.challengeButton)
 
-		if new.split('+')[0] == "ADD":
-			for players in new.split('+')[1:]:	
-				self.hbox = QtGui.QHBoxLayout()
+    def removePlayer(self,name):
+        try:
+            self.playerNamesObjects[name][2].setDisabled(1)
+            self.playerNamesObjects[name][2].setText("Offline")
+            
+        except KeyError:
+            pass
 
-				self.playerName = QtGui.QLabel(players,self)
-				self.playerName.setAlignment(QtCore.Qt.AlignCenter)
-				self.hbox.addWidget(self.playerName)
+    def initNet(self):
+        thread = CheckNewData()
+        self.connect(thread,thread.newDataSignal,self.update)
+        thread.start()
 
-				self.spacer = QtGui.QLabel("",self)
-				self.hbox.addWidget(self.spacer)
+    def PrintPlayersName(self,data):
 
-				self.challengeButton = QtGui.QPushButton("Challenge %s !!" %players)				
-				self.challengeButton.clicked.connect(partial(self.challenge, players))
-				self.hbox.addWidget(self.challengeButton)
-				self.mainVbox.addLayout(self.hbox)
+        PlayersHeadingLabel = QtGui.QLabel('Players online\nYOU ARE %s'%NAME.upper() ,self)
+        PlayersHeadingLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.mainVbox.addWidget(PlayersHeadingLabel)
 
-				self.playerNamesObjects.extend([self.playerName,self.challengeButton])
+        for players in data.split('+')[1:]:
+            self.addPlayer(players)
+
+    def update(self):
+        # print "RECIEVED"
+        new = selfSocket.recv(8192)
+        print new
+        if new.split('+')[0] == "ADD":
+            self.addPlayer(new.split('+')[1])
+        elif new.split('+')[0] == "CLIENT":
+            print "I KNOW I AM BEING CHALLENGED"
+        elif new.split('+')[0] == "SERVER":
+            print "I KNOW I AM CHALLENGING"
+        elif new.split('+')[0] == "REMOVE":
+            self.removePlayer(new.split('+')[1])
+
+        else:
+            print "ERROR"
+
+    def challenge(self,user):
+        selfSocket.send("CHALLENGE+%s+%s"%(NAME,user))
+
+    def __init__(self):
+        super(mainClientWindow,self).__init__()
+        self.playerNamesObjects = {}
+        self.initUI()
+
+    def initUI(self):
+        self.mainVbox = QtGui.QVBoxLayout()
+        self.setGeometry(300,300,500,500)
+        self.setWindowTitle("Chess")
+        self.mainVbox.addStretch(0)
+
+        self.setLayout(self.mainVbox)
+
+        data = selfSocket.recv(RECV_BUFFER)
+        self.PrintPlayersName(data)
+
+        self.show()
+
+class CheckNewData(QtCore.QThread):
+    def __init__(self):
+        QtCore.QThread.__init__(self, parent = app)
+        self.newDataSignal = QtCore.SIGNAL("NEWDATA")
+    
+    def run(self):
+        while 1:
+            r,w,x = select.select([selfSocket],[],[],0.01)
+            if r!=[]: self.emit(self.newDataSignal)
+            sleep(1)
 
 
-	def refresh(self):
-		selfSocket.send("REFRESH")
-		self.mainVbox.addStretch(0)
-		self.getAndPrintPlayersName()
-
-	def challenge(self,user):
-		selfSocket.send("CHALLENGE %s %s"%(NAME,user))
-
-	def __init__(self):
-		super(mainClientWindow,self).__init__()
-		self.playerNamesObjects = []
-		self.initUI()
-
-	def initUI(self):
-		self.mainVbox = QtGui.QVBoxLayout()
-		self.setGeometry(300,300,500,500)
-		self.setWindowTitle("Chess")
-		self.setLayout(self.mainVbox)
-		self.refresh()
-		self.show()
+app = QtGui.QApplication(sys.argv)
 
 def main():
 
-	app = QtGui.QApplication(sys.argv)
-	ex = mainClientWindow()
-	a = app.exec_()
+    ex = mainClientWindow()
 
-	selfSocket.send("EXIT %s"%NAME)
-	selfSocket.close()
-	sys.exit()
+    QtCore.QTimer.singleShot(0,ex.initNet)
+
+    app.exec_()
+
+    selfSocket.send("EXIT+%s"%NAME)
+    selfSocket.close()
+    sys.exit()
 
 if __name__ == "__main__":
-	main()
+    main()
