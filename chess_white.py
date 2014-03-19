@@ -10,23 +10,48 @@
 
 #---------------------!!----------------Initialisation----------------------!!---------------------------#
 
+
+from sys import argv
+
 import socket
 from pickle import dumps,loads
 from select import select
 
-
 serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-SERVER = '127.0.0.1'
-PORT = 8901
+SERVER = argv[2]
+PORT = 8903
 RECV_BUFFER = 8192
-NAME = "sambhav"
-AUTHENTICATION = "whatever"
+NAME = argv[1]
+AUTHENTICATION = str(hash(argv[3]))
+
+# print SERVER
+
+def authenticateAndSend(data):
+    dataStream = '+'.join([AUTHENTICATION, data])
+    clientSocket.send(dataStream)
+
+def authenticateAndReceive():
+    dataStream = clientSocket.recv(RECV_BUFFER)
+    if dataStream.split('+')[0] == AUTHENTICATION:
+        return '+'.join(dataStream.split('+')[1:])
+    else: return 0
+
+# print "MY NAME IS %s"%NAME
+# print "OPENING SERVER AT %s at %s"%(str(SERVER),str(PORT))
 
 serverSocket.bind((SERVER,PORT))
 serverSocket.listen(1)
 clientSocket, clientAddress = serverSocket.accept()
-# clientSocket.send(NAME + '+' + AUTHENTICATION)
 
+authenticateAndSend(NAME)
+
+data = authenticateAndReceive()
+if not data:
+    print "opponent not authenticated"
+    exit(1)
+OPPONENT_NAME = data
+
+# print NAME + ' vs ' + OPPONENT_NAME
 
 import pygame
 black    = (   0,   0,   0)
@@ -44,6 +69,7 @@ pygame.display.set_caption("WHITE")
 clock = pygame.time.Clock()
 
 #---------------------!!---------All the Game Logic Methods----------!!---------------------------#
+
 
 def cd(x,y):
     """takes input as coordinate number of box and outputs the required pixel numbers to print"""
@@ -199,12 +225,12 @@ def sendData(pieceMoved, pieceKilled = None, SpecialMove = None):
     else:
         pass
 
-    print "SENDING: ",data
+    # print "SENDING: ",data
     clientSocket.send(data)
 
 def receiveData():
     dataStream = clientSocket.recv(RECV_BUFFER)
-    print "RECEIVED: ",dataStream
+    # print "RECEIVED: ",dataStream
     [pieceMovedName,pieceMoved_x,pieceMoved_y,killedPieceName,SpecialMove] = dataStream.split('+')
 
     if killedPieceName != "NONE":

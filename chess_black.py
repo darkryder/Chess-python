@@ -10,18 +10,46 @@
 
 #---------------------!!----------------Initialisation----------------------!!---------------------------#
 
+from sys import argv
+
 import socket
 from pickle import dumps,loads
 from select import select
 
 clientSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-SERVER = '127.0.0.1'
-PORT = 8901
+SERVER = argv[2]
+PORT = 8903
 RECV_BUFFER = 8192
+NAME = argv[1]
+AUTHENTICATION = str(hash(argv[3]))
+
+# print SERVER
+
+# print "MY NAME IS %s"%NAME
+# print "CONNECTING AT %s at %s"%(str(SERVER),str(PORT))
+
 
 clientSocket.connect((SERVER,PORT))
 
+def authenticateAndSend(data):
+    dataStream = '+'.join([AUTHENTICATION, data])
+    clientSocket.send(dataStream)
 
+def authenticateAndReceive():
+    dataStream = clientSocket.recv(RECV_BUFFER)
+    if dataStream.split('+')[0] == AUTHENTICATION:
+        return '+'.join(dataStream.split('+')[1:])
+# print AUTHENTICATION
+
+data = authenticateAndReceive()
+if not data:
+    print "Opponent not authenticated"
+    exit(1)
+OPPONENT_NAME = data
+
+authenticateAndSend(NAME)
+
+# print OPPONENT_NAME + ' vs ' + NAME
 
 import pygame
 black    = (   0,   0,   0)
@@ -39,6 +67,7 @@ pygame.display.set_caption("BLACK")
 clock = pygame.time.Clock()
 
 #---------------------!!---------All the Game Logic Methods----------!!---------------------------#
+
 
 def cd(x,y):
     """takes input as coordinate number of box and outputs the required pixel numbers to print"""
@@ -192,14 +221,14 @@ def sendData(pieceMoved, pieceKilled = None, SpecialMove = None):
     if not SpecialMove: data += "+NONE"
     else:
         pass
-    print "SENDING: ",data
+    # print "SENDING: ",data
 
 
     clientSocket.send(data)
 
 def receiveData():
     dataStream = clientSocket.recv(RECV_BUFFER)
-    print "RECEIVED: ",dataStream
+    # print "RECEIVED: ",dataStream
 
     [pieceMovedName,pieceMoved_x,pieceMoved_y,killedPieceName,SpecialMove] = dataStream.split('+')
 
@@ -223,7 +252,6 @@ def receiveData():
         positionToPieceDict[(actualPiece.x,actualPiece.y)] = actualPiece
         refreshLegalMoves()
 
-    
 
     global colour
     colour = "black"

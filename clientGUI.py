@@ -4,6 +4,7 @@ import socket
 from functools import partial
 from time import sleep
 import select
+from subprocess import Popen
 
 NAME = sys.argv[1]
 
@@ -23,32 +24,30 @@ class mainClientWindow(QtGui.QWidget):
         try:
             # if name!=NAME:
             a = self.playerNamesObjects[name]
-            a[2].setEnabled(1)
-            a[2].setText("Challenge !!")
+            a[1].setEnabled(1)
+            a[1].setText("Challenge !!")
+            
         except KeyError:
-            self.hbox = QtGui.QHBoxLayout()
-
+            
             self.playerName = QtGui.QLabel(name,self)
             self.playerName.setAlignment(QtCore.Qt.AlignCenter)
-            self.hbox.addWidget(self.playerName)
+            self.mainGrid.addWidget(self.playerName,len(self.playerNamesObjects)+3,0,1,1)
 
-            self.spacer = QtGui.QLabel("",self)
-            self.hbox.addWidget(self.spacer)
+            self.challengeButton = QtGui.QPushButton("Challenge !!")
 
             if name == NAME:
-                self.challengeButton = QtGui.QPushButton("Can't challenge yourself.")
                 self.challengeButton.setDisabled(1)
+                self.challengeButton.setText("<You>")
             else:
-                self.challengeButton = QtGui.QPushButton("Challenge !!")
                 self.challengeButton.clicked.connect(partial(self.challenge, name))
-            self.hbox.addWidget(self.challengeButton)
-            self.mainVbox.addLayout(self.hbox)
-            self.playerNamesObjects[name] = (self.hbox,self.playerName,self.challengeButton)
+
+            self.mainGrid.addWidget(self.challengeButton,len(self.playerNamesObjects)+3,2,1,2)            
+            self.playerNamesObjects[name] = (self.playerName,self.challengeButton)
 
     def removePlayer(self,name):
         try:
-            self.playerNamesObjects[name][2].setDisabled(1)
-            self.playerNamesObjects[name][2].setText("Offline")
+            self.playerNamesObjects[name][1].setDisabled(1)
+            self.playerNamesObjects[name][1].setText("Offline")
             
         except KeyError:
             pass
@@ -60,28 +59,43 @@ class mainClientWindow(QtGui.QWidget):
 
     def PrintPlayersName(self,data):
 
-        PlayersHeadingLabel = QtGui.QLabel('Players online\nYOU ARE %s'%NAME.upper() ,self)
-        PlayersHeadingLabel.setAlignment(QtCore.Qt.AlignCenter)
-        self.mainVbox.addWidget(PlayersHeadingLabel)
+        self.PlayersHeadingLabel = QtGui.QLabel('Players Online',self)
+        self.PlayersHeadingLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.mainVBox.addWidget(self.PlayersHeadingLabel)
+
+        self.Identifier = QtGui.QLabel("You are %s"%NAME ,self)
+        self.Identifier.setAlignment(QtCore.Qt.AlignCenter)
+        self.mainVBox.addWidget(self.Identifier)
+        self.mainVBox.addWidget(QtGui.QLabel('',self))
+
+
+        self.mainVBox.addLayout(self.mainGrid)
+
+
 
         for players in data.split('+')[1:]:
             self.addPlayer(players)
 
     def update(self):
-        # print "RECIEVED"
+
         new = selfSocket.recv(8192)
-        print new
+        # print new
+
         if new.split('+')[0] == "ADD":
             self.addPlayer(new.split('+')[1])
+
         elif new.split('+')[0] == "CLIENT":
-            print "I KNOW I AM BEING CHALLENGED"
+            Popen(['python','chess_black.py','%s'%NAME,'%s'%new.split('+')[1],'%s'%new.split('+')[2]])        
+
         elif new.split('+')[0] == "SERVER":
-            print "I KNOW I AM CHALLENGING"
+            Popen(['python','chess_white.py','%s'%NAME,'%s'%new.split('+')[1],'%s'%new.split('+')[2]])
+
+            
         elif new.split('+')[0] == "REMOVE":
             self.removePlayer(new.split('+')[1])
 
         else:
-            print "ERROR"
+            print "ERROR", new
 
     def challenge(self,user):
         selfSocket.send("CHALLENGE+%s+%s"%(NAME,user))
@@ -92,12 +106,16 @@ class mainClientWindow(QtGui.QWidget):
         self.initUI()
 
     def initUI(self):
-        self.mainVbox = QtGui.QVBoxLayout()
-        self.setGeometry(300,300,500,500)
-        self.setWindowTitle("Chess")
-        self.mainVbox.addStretch(0)
 
-        self.setLayout(self.mainVbox)
+        self.setWindowTitle("Chess")
+
+        self.mainVBox = QtGui.QVBoxLayout()
+
+        self.mainGrid = QtGui.QGridLayout()
+
+
+        self.setLayout(self.mainVBox)
+
 
         data = selfSocket.recv(RECV_BUFFER)
         self.PrintPlayersName(data)
@@ -116,8 +134,6 @@ class CheckNewData(QtCore.QThread):
             sleep(1)
 
 
-app = QtGui.QApplication(sys.argv)
-
 def main():
 
     ex = mainClientWindow()
@@ -131,4 +147,6 @@ def main():
     sys.exit()
 
 if __name__ == "__main__":
+
+    app = QtGui.QApplication(sys.argv)
     main()
