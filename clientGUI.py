@@ -4,20 +4,24 @@ import socket
 from functools import partial
 from time import sleep
 import select
-from subprocess import Popen
+from subprocess import Popen,PIPE
+from threading import Thread
+from Queue import Queue, Empty
 
 NAME = sys.argv[1]
 
 SERVER = '127.0.0.1'
-PORT = 2441
+PORT = 2440
 RECV_BUFFER = 8192
 
 selfSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 selfSocket.connect((SERVER, PORT))
 
+gameProcess = None
+
 selfSocket.send(NAME)
 
-class mainClientWindow(QtGui.QWidget):
+class PlayersPane(QtGui.QWidget):
 
     def addPlayer(self,name):
 
@@ -53,7 +57,7 @@ class mainClientWindow(QtGui.QWidget):
             pass
 
     def initNet(self):
-        thread = CheckNewData()
+        thread = CheckNewData()#gameProcess = self.gameProcess)
         self.connect(thread,thread.newDataSignal,self.update)
         thread.start()
 
@@ -76,6 +80,19 @@ class mainClientWindow(QtGui.QWidget):
         for players in data.split('+')[1:]:
             self.addPlayer(players)
 
+
+    def startGameServer(self,new):
+        
+        global gameProcess
+        gameProcess = Popen(['python','chess_white.py','%s'%NAME,'%s'%new.split('+')[1],
+                            '%s'%new.split('+')[2]], stdout = PIPE)
+
+    def startGameClient(self,new):
+
+        global gameProcess
+        gameProcess = Popen(['python','chess_black.py','%s'%NAME,'%s'%new.split('+')[1],
+                                  '%s'%new.split('+')[2]], stdout = PIPE)
+
     def update(self):
 
         new = selfSocket.recv(8192)
@@ -85,11 +102,10 @@ class mainClientWindow(QtGui.QWidget):
             self.addPlayer(new.split('+')[1])
 
         elif new.split('+')[0] == "CLIENT":
-            Popen(['python','chess_black.py','%s'%NAME,'%s'%new.split('+')[1],'%s'%new.split('+')[2]])        
+            self.startGameClient(new)
 
         elif new.split('+')[0] == "SERVER":
-            Popen(['python','chess_white.py','%s'%NAME,'%s'%new.split('+')[1],'%s'%new.split('+')[2]])
-
+            self.startGameServer(new)            
             
         elif new.split('+')[0] == "REMOVE":
             self.removePlayer(new.split('+')[1])
@@ -101,9 +117,12 @@ class mainClientWindow(QtGui.QWidget):
         selfSocket.send("CHALLENGE+%s+%s"%(NAME,user))
 
     def __init__(self):
-        super(mainClientWindow,self).__init__()
+        super(PlayersPane,self).__init__()
         self.playerNamesObjects = {}
         self.initUI()
+        global gameProcess
+        gameProcess = None
+        
 
     def initUI(self):
 
@@ -123,7 +142,7 @@ class mainClientWindow(QtGui.QWidget):
         self.show()
 
 class CheckNewData(QtCore.QThread):
-    def __init__(self):
+    def __init__(self,):
         QtCore.QThread.__init__(self, parent = app)
         self.newDataSignal = QtCore.SIGNAL("NEWDATA")
     
@@ -131,12 +150,21 @@ class CheckNewData(QtCore.QThread):
         while 1:
             r,w,x = select.select([selfSocket],[],[],0.01)
             if r!=[]: self.emit(self.newDataSignal)
+            global gameProcess
+            if gameProcess:
+                if gameProcess.poll() == None:
+                    pass
+                else:
+                    data = gameProcess.stdout.read()
+                    print data
+                    gameProcess = None
             sleep(1)
+    
 
 
 def main():
 
-    ex = mainClientWindow()
+    ex = PlayersPane()
 
     QtCore.QTimer.singleShot(0,ex.initNet)
 

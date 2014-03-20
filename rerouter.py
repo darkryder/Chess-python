@@ -10,7 +10,7 @@ SocketsToTrack = []
 
 serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
-PORT = 2441
+PORT = 2440
 NETWORK_REACH = '0.0.0.0'
 LISTEN_LIMIT = 50						#How many clients can it handle
 RECV_BUFFER = 8192

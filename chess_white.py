@@ -14,23 +14,31 @@
 from sys import argv
 
 import socket
-from pickle import dumps,loads
 from select import select
 
 serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 SERVER = argv[2]
-PORT = 8903
+PORT = 8900
 RECV_BUFFER = 8192
 NAME = argv[1]
 AUTHENTICATION = str(hash(argv[3]))
 
 # print SERVER
 
-def quitGame(resign = False):
+def quitGame(resign = False, opponent_resign = False):
     if resign:
         authenticateAndSend("RESIGN")
-        print "I RESIGN"
-    else: authenticateAndSend("EXIT")
+        print "RESIGN"
+    elif opponent_resign:
+        authenticateAndSend("VICTORY")
+        print "OPPONENT_SURRENDERED"
+    else:
+        authenticateAndSend("EXIT")
+        print "CLEANEXIT"
+    
+
+    clientSocket.close()
+
     pygame.quit()
     
     exit(0)
@@ -56,8 +64,8 @@ authenticateAndSend(NAME)
 
 data = authenticateAndReceive()
 if not data:
-    print "opponent not authenticated"
-    exit(1)
+    print "OpponentNotAuthenticated"
+    quitGame()
 OPPONENT_NAME = data
 
 # print NAME + ' vs ' + OPPONENT_NAME
@@ -74,7 +82,7 @@ console = False
 size = [860,640] if console else [640,640]
 font = pygame.font.Font(None, 40)
 screen = pygame.display.set_mode(size)
-pygame.display.set_caption("WHITE")
+pygame.display.set_caption("%s VS %s"%(NAME,OPPONENT_NAME))
 clock = pygame.time.Clock()
 
 #---------------------!!---------All the Game Logic Methods----------!!---------------------------#
@@ -241,12 +249,9 @@ def receiveData():
     dataStream = authenticateAndReceive()
 
     if dataStream == "RESIGN":
-        print "Opponent quit the game"
-        exit(0)
+        quitGame(opponent_resign = True)
     elif dataStream == "EXIT":
-        print "ERROR/CLEAN EXIT"
-        exit()
-
+        quitGame()
 
     [pieceMovedName,pieceMoved_x,pieceMoved_y,killedPieceName,SpecialMove] = dataStream.split('+')
 
@@ -588,6 +593,6 @@ while not gamewon:
     if gamewon:
         from time import sleep
         sleep(3)
-        exit(0)
-# Close the window and quit.
+        quitGame()
+        # Close the window and quit.
 quitGame()
