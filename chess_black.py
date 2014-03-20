@@ -68,6 +68,13 @@ clock = pygame.time.Clock()
 
 #---------------------!!---------All the Game Logic Methods----------!!---------------------------#
 
+def quitGame(resign = False):
+    if resign: 
+        print "I RESIGN"
+        authenticateAndSend("RESIGN")
+    else: authenticateAndSend("EXIT")
+    pygame.quit()
+    exit(0)
 
 def cd(x,y):
     """takes input as coordinate number of box and outputs the required pixel numbers to print"""
@@ -224,12 +231,19 @@ def sendData(pieceMoved, pieceKilled = None, SpecialMove = None):
     # print "SENDING: ",data
 
 
-    clientSocket.send(data)
+    authenticateAndSend(data)
 
 def receiveData():
-    dataStream = clientSocket.recv(RECV_BUFFER)
+    dataStream = authenticateAndReceive()
     # print "RECEIVED: ",dataStream
 
+    if dataStream == "RESIGN":
+        print "Opponent quit the game"
+        exit(0)
+    elif dataStream == "EXIT":
+        print "ERROR/CLEAN EXIT"
+        exit()
+    
     [pieceMovedName,pieceMoved_x,pieceMoved_y,killedPieceName,SpecialMove] = dataStream.split('+')
 
     if killedPieceName != "NONE":
@@ -476,7 +490,7 @@ while not gamewon:
         for event in events:
 
             if event.type == pygame.QUIT:       # Quitting
-                exit(0)
+                quitGame(resign = True)
 
             if colour == "black":
                 if event.type == pygame.MOUSEBUTTONUP: pressed= False       # get ready for next click
@@ -570,6 +584,6 @@ while not gamewon:
     if gamewon:
         from time import sleep
         sleep(3)
-        exit(0)
+        quitGame()
 # Close the window and quit.
-pygame.quit()
+quitGame()
