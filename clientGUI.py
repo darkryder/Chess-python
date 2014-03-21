@@ -16,27 +16,38 @@ from threading import Thread
 NAME = sys.argv[1]
 
 SERVER = '127.0.0.1'
-PORT = 2448
+PORT = 2446
 RECV_BUFFER = 8192
+
+
 
 selfSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 selfSocket.connect((SERVER, PORT))
 
+def getCleanData(sock):
+    data = sock.recv(RECV_BUFFER)
+    return list(data.strip().split('\n'))
+
+def sendCleanData(sock,data):
+    sock.send(data + '\n')
+
+
 gameProcess = None
 
-selfSocket.send(NAME)
-verification = selfSocket.recv(RECV_BUFFER)
+sendCleanData(selfSocket,NAME)
+verification = getCleanData(selfSocket)[0]
 
 if verification == "NAME_ERROR":
     selfSocket.close()
     exit(0)
 
 elif verification == "WELCOME":
-    selfSocket.send("READY")
+    sendCleanData(selfSocket,"READY")
 
 else:
     exit(0)
  
+
 class PlayersPane(QtGui.QWidget):
 
     def addPlayer(self,name):
@@ -84,17 +95,17 @@ class PlayersPane(QtGui.QWidget):
         print "called"
 
         if "RESIGN" in data:
-            selfSocket.send("RESULT+DEFEAT+%s" %(NAME))
+            sendCleanData(selfSocket,"RESULT+DEFEAT+%s" %(NAME))
             print 1
 
         elif "OPPONENT_SURRENDERED" in data:
-            selfSocket.send("RESULT+VICTORY+%s"%NAME)
+            sendCleanData(selfSocket,"RESULT+VICTORY+%s"%NAME)
             print 2
         elif "CLEAN_EXIT" in data:
-            selfSocket.send("RESULT+DRAW+%s"%NAME)
+            sendCleanData(selfSocket,"RESULT+DRAW+%s"%NAME)
             print 3
         elif "OpponentNotAuthenticated" in data:
-            selfSocket.send("RESULT+ERROR+%s"%NAME)
+            sendCleanData(selfSocket,"RESULT+ERROR+%s"%NAME)
             print 4
         else:
             print 5,data
@@ -148,29 +159,30 @@ class PlayersPane(QtGui.QWidget):
 
     def update(self):
 
-        new = selfSocket.recv(8192)
-        print new
+        newData = getCleanData(selfSocket)
+        for new in newData:
+            print new
 
-        if new.split('+')[0] == "ADD":
-            self.addPlayer(new.split('+')[1])
+            if new.split('+')[0] == "ADD":
+                self.addPlayer(new.split('+')[1])
 
-        elif new.split('+')[0] == "CLIENT":
-            self.startGameClient(new)
+            elif new.split('+')[0] == "CLIENT":
+                self.startGameClient(new)
 
-        elif new.split('+')[0] == "SERVER":
-            self.startGameServer(new)            
-            
-        elif new.split('+')[0] == "REMOVE":
-            self.removePlayer(new.split('+')[1])
+            elif new.split('+')[0] == "SERVER":
+                self.startGameServer(new)            
+                
+            elif new.split('+')[0] == "REMOVE":
+                self.removePlayer(new.split('+')[1])
 
-        elif new.split('+')[0] == "PLAYING":
-            self.changePlayerStatus(new)
+            elif new.split('+')[0] == "PLAYING":
+                self.changePlayerStatus(new)
 
-        else:
-            print "ERROR", new
+            else:
+                print "ERROR", new
 
     def challenge(self,user):
-        selfSocket.send("CHALLENGE+%s+%s"%(NAME,user))
+        sendCleanData(selfSocket,"CHALLENGE+%s+%s"%(NAME,user))
         self.playerNamesObjects[user][1].setText("VS %s"%NAME)
         self.playerNamesObjects[NAME][1].setText("VS %s"%user)
         self.playerNamesObjects[user][1].setDisabled(1)
@@ -194,7 +206,7 @@ class PlayersPane(QtGui.QWidget):
         self.setLayout(self.mainVBox)
 
 
-        data = selfSocket.recv(RECV_BUFFER)
+        data = getCleanData(selfSocket)[0]
         self.PrintPlayersName(data)
 
         self.show()
@@ -228,7 +240,7 @@ def main():
 
     app.exec_()
 
-    selfSocket.send("EXIT+%s"%NAME)
+    sendCleanData(selfSocket,"EXIT+%s"%NAME)
     selfSocket.close()
     sys.exit()
 
