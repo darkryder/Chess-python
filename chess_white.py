@@ -18,7 +18,7 @@ from select import select
 
 serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 SERVER = argv[2]
-PORT = 8900
+PORT = 8908
 RECV_BUFFER = 8192
 NAME = argv[1]
 AUTHENTICATION = str(hash(argv[3]))
@@ -38,8 +38,8 @@ def quitGame(resign = False, opponent_resign = False):
     
 
     clientSocket.close()
-
-    pygame.quit()
+    # global pygame
+    # pygame.quit()
     
     exit(0)
 
@@ -53,9 +53,6 @@ def authenticateAndReceive():
         return '+'.join(dataStream.split('+')[1:])
     else: return 0
 
-# print "MY NAME IS %s"%NAME
-# print "OPENING SERVER AT %s at %s"%(str(SERVER),str(PORT))
-
 serverSocket.bind((SERVER,PORT))
 serverSocket.listen(1)
 clientSocket, clientAddress = serverSocket.accept()
@@ -67,8 +64,6 @@ if not data:
     print "OpponentNotAuthenticated"
     quitGame()
 OPPONENT_NAME = data
-
-# print NAME + ' vs ' + OPPONENT_NAME
 
 import pygame
 black    = (   0,   0,   0)
@@ -242,7 +237,6 @@ def sendData(pieceMoved, pieceKilled = None, SpecialMove = None):
     else:
         pass
 
-    # print "SENDING: ",data
     authenticateAndSend(data)
 
 def receiveData():
@@ -275,8 +269,6 @@ def receiveData():
 
         positionToPieceDict[(actualPiece.x,actualPiece.y)] = actualPiece
         refreshLegalMoves()
-
-    
 
     global colour
     colour = "white"

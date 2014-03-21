@@ -1,17 +1,22 @@
+# SEND NAME
+# WAIT FOR WELCOME OR NAME_ERROR
+#EXITS BY EXIT+NAME
+#THE CHESS PROGRAM SHOULD TRY TO CONNECT 5 TIMES AFTER WAITING FOR 1 SECOND EACH TIME RATHER THAN SLOWING DOWN SERVER.
+#ON CHALLENGING THEY SHOULD THE BUTTONS THEMSELVES THEY WONT GET A REQUEST FOR MODIFICATION FROM THE SERVER TO AVOID COLLISION WITH SERVER CLIENT REQUEST
+
 import sys
 from PyQt4 import QtGui,QtCore
 import socket
 from functools import partial
 from time import sleep
-import select
+from select import select
 from subprocess import Popen,PIPE
 from threading import Thread
-from Queue import Queue, Empty
 
 NAME = sys.argv[1]
 
 SERVER = '127.0.0.1'
-PORT = 2440
+PORT = 2448
 RECV_BUFFER = 8192
 
 selfSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -20,17 +25,29 @@ selfSocket.connect((SERVER, PORT))
 gameProcess = None
 
 selfSocket.send(NAME)
+verification = selfSocket.recv(RECV_BUFFER)
 
+if verification == "NAME_ERROR":
+    selfSocket.close()
+    exit(0)
+
+elif verification == "WELCOME":
+    selfSocket.send("READY")
+
+else:
+    exit(0)
+ 
 class PlayersPane(QtGui.QWidget):
 
     def addPlayer(self,name):
 
         try:
-            # if name!=NAME:
             a = self.playerNamesObjects[name]
             a[1].setEnabled(1)
             a[1].setText("Challenge !!")
-            
+            if name == NAME: 
+                a[1].setText("<You>")
+                a[1].setDisabled(1)
         except KeyError:
             
             self.playerName = QtGui.QLabel(name,self)
@@ -52,13 +69,40 @@ class PlayersPane(QtGui.QWidget):
         try:
             self.playerNamesObjects[name][1].setDisabled(1)
             self.playerNamesObjects[name][1].setText("Offline")
+            # self.playerNamesObjects[name][0].hide()
+            # self.playerNamesObjects[name][1].hide()
+            
             
         except KeyError:
             pass
 
+    def gameStatusChange(self):
+        global gameProcess
+        data = gameProcess.stdout.read()        
+        gameProcess = None
+
+        print "called"
+
+        if "RESIGN" in data:
+            selfSocket.send("RESULT+DEFEAT+%s" %(NAME))
+            print 1
+
+        elif "OPPONENT_SURRENDERED" in data:
+            selfSocket.send("RESULT+VICTORY+%s"%NAME)
+            print 2
+        elif "CLEAN_EXIT" in data:
+            selfSocket.send("RESULT+DRAW+%s"%NAME)
+            print 3
+        elif "OpponentNotAuthenticated" in data:
+            selfSocket.send("RESULT+ERROR+%s"%NAME)
+            print 4
+        else:
+            print 5,data
+
     def initNet(self):
-        thread = CheckNewData()#gameProcess = self.gameProcess)
+        thread = CheckNewData()
         self.connect(thread,thread.newDataSignal,self.update)
+        self.connect(thread,thread.gameFinishedSignal,self.gameStatusChange)
         thread.start()
 
     def PrintPlayersName(self,data):
@@ -72,31 +116,40 @@ class PlayersPane(QtGui.QWidget):
         self.mainVBox.addWidget(self.Identifier)
         self.mainVBox.addWidget(QtGui.QLabel('',self))
 
-
         self.mainVBox.addLayout(self.mainGrid)
-
-
 
         for players in data.split('+')[1:]:
             self.addPlayer(players)
 
+    def changePlayerStatus(self,data):
+        [user1,user2] = data.split('+')[1:]
+        self.playerNamesObjects[user1][1].setText("VS %s"%user2)
+        self.playerNamesObjects[user2][1].setText("VS %s"%user1)
+        self.playerNamesObjects[user1][1].setDisabled(1)
+        self.playerNamesObjects[user2][1].setDisabled(1)
 
     def startGameServer(self,new):
         
         global gameProcess
-        gameProcess = Popen(['python','chess_white.py','%s'%NAME,'%s'%new.split('+')[1],
-                            '%s'%new.split('+')[2]], stdout = PIPE)
+        gameProcess = Popen(['python','chess_white.py','%s'%NAME,'%s'%new.split('+')[2],
+                            '%s'%new.split('+')[3]], stdout = PIPE)
+
 
     def startGameClient(self,new):
 
+        self.playerNamesObjects[new.split('+')[1]][1].setDisabled(1)
+        self.playerNamesObjects[new.split('+')[1]][1].setText("VS %s"%NAME)
+
+        self.playerNamesObjects[NAME][1].setText("VS %s"%new.split('+')[1])
+        
         global gameProcess
-        gameProcess = Popen(['python','chess_black.py','%s'%NAME,'%s'%new.split('+')[1],
-                                  '%s'%new.split('+')[2]], stdout = PIPE)
+        gameProcess = Popen(['python','chess_black.py','%s'%NAME,'%s'%new.split('+')[2],
+                                  '%s'%new.split('+')[3]], stdout = PIPE)
 
     def update(self):
 
         new = selfSocket.recv(8192)
-        # print new
+        print new
 
         if new.split('+')[0] == "ADD":
             self.addPlayer(new.split('+')[1])
@@ -110,11 +163,17 @@ class PlayersPane(QtGui.QWidget):
         elif new.split('+')[0] == "REMOVE":
             self.removePlayer(new.split('+')[1])
 
+        elif new.split('+')[0] == "PLAYING":
+            self.changePlayerStatus(new)
+
         else:
             print "ERROR", new
 
     def challenge(self,user):
         selfSocket.send("CHALLENGE+%s+%s"%(NAME,user))
+        self.playerNamesObjects[user][1].setText("VS %s"%NAME)
+        self.playerNamesObjects[NAME][1].setText("VS %s"%user)
+        self.playerNamesObjects[user][1].setDisabled(1)
 
     def __init__(self):
         super(PlayersPane,self).__init__()
@@ -123,10 +182,9 @@ class PlayersPane(QtGui.QWidget):
         global gameProcess
         gameProcess = None
         
-
     def initUI(self):
 
-        self.setWindowTitle("Chess")
+        self.setWindowTitle("Chess-IIITD")
 
         self.mainVBox = QtGui.QVBoxLayout()
 
@@ -142,23 +200,23 @@ class PlayersPane(QtGui.QWidget):
         self.show()
 
 class CheckNewData(QtCore.QThread):
-    def __init__(self,):
+    def __init__(self):
         QtCore.QThread.__init__(self, parent = app)
         self.newDataSignal = QtCore.SIGNAL("NEWDATA")
-    
+        self.gameFinishedSignal = QtCore.SIGNAL("GAMEFINISHED")
+
     def run(self):
+        global gameProcess
         while 1:
-            r,w,x = select.select([selfSocket],[],[],0.01)
+            r,w,x = select([selfSocket],[],[],0.001)
             if r!=[]: self.emit(self.newDataSignal)
-            global gameProcess
             if gameProcess:
                 if gameProcess.poll() == None:
                     pass
                 else:
-                    data = gameProcess.stdout.read()
-                    print data
-                    gameProcess = None
-            sleep(1)
+                    self.emit(self.gameFinishedSignal)
+                    print "calling"
+            sleep(0.1)
     
 
 

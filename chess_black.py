@@ -11,24 +11,28 @@
 #---------------------!!----------------Initialisation----------------------!!---------------------------#
 
 from sys import argv
-
+from time import sleep 
 import socket
 from select import select
 
 clientSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 SERVER = argv[2]
-PORT = 8900
+PORT = 8908
 RECV_BUFFER = 8192
 NAME = argv[1]
 AUTHENTICATION = str(hash(argv[3]))
 
-# print SERVER
-
-# print "MY NAME IS %s"%NAME
-# print "CONNECTING AT %s at %s"%(str(SERVER),str(PORT))
-
-
-clientSocket.connect((SERVER,PORT))
+sleep(1)
+i = 0
+# print "CONNECTING"
+try:
+    clientSocket.connect((SERVER,PORT))
+except:
+    if i == 5:
+        print "CouldNotConnect"
+        exit()
+    sleep(1)
+    i+=1
 
 def authenticateAndSend(data):
     dataStream = '+'.join([AUTHENTICATION, data])
@@ -38,7 +42,6 @@ def authenticateAndReceive():
     dataStream = clientSocket.recv(RECV_BUFFER)
     if dataStream.split('+')[0] == AUTHENTICATION:
         return '+'.join(dataStream.split('+')[1:])
-# print AUTHENTICATION
 
 data = authenticateAndReceive()
 if not data:
@@ -47,8 +50,6 @@ if not data:
 OPPONENT_NAME = data
 
 authenticateAndSend(NAME)
-
-# print OPPONENT_NAME + ' vs ' + NAME
 
 import pygame
 black    = (   0,   0,   0)
@@ -81,7 +82,8 @@ def quitGame(resign = False, opponent_resign = False):
 
     clientSocket.close()
 
-    pygame.quit()
+    # global pygame
+    # pygame.quit()
     
     exit(0)
 

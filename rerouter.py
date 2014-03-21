@@ -1,80 +1,139 @@
 import socket
-import subprocess
 import time
-import select
+from select import select
 
-PlayersCurrentlyPlaying = {}
-PlayersInQueue = {}
-
-SocketsToTrack = []
-
-serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-
-PORT = 2440
+PORT = 2448
 NETWORK_REACH = '0.0.0.0'
-LISTEN_LIMIT = 50						#How many clients can it handle
+LISTEN_LIMIT = 50                       #Number of clients to handle
 RECV_BUFFER = 8192
 
-serverSocket.bind((NETWORK_REACH,PORT))
-serverSocket.listen(LISTEN_LIMIT)
-SocketsToTrack.append(serverSocket)
+class PlayersState(object):
 
+    def __init__(self):
+        self.PlayersCurrentlyPlaying = {}       # (NAME1,NAME2) --> (CurrentlyPlaying<bool>, UID)
+        self.PlayersOnline = {}                 # NAME --> (socket,address)
 
-def SendPlayerList(sock):
+class Server(object):
 
-	a = "ADD+" + '+'.join(PlayersInQueue.keys())
-	sock.send(a)
-	# print "sending to socket"
+    def __init__(self,playersObject):
+        self.SocketsToTrack = []
+        self.serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.serverSocket.bind((NETWORK_REACH,PORT))
+        self.serverSocket.listen(LISTEN_LIMIT)
+        self.SocketsToTrack.append(self.serverSocket)
+        self.playersObject = playersObject
 
-while 1:
+    def addNewPlayer(self,playername,playersocket,playeraddress,playersObject):
+        for s in self.SocketsToTrack:
+            if s != self.serverSocket:
+                s.send("ADD+%s"%playername)
 
-	read,write,error = select.select(SocketsToTrack,[],[],0.1)
+        playersObject.PlayersOnline[playername] = (playersocket,playeraddress)
+        self.SocketsToTrack.append(playersocket)
+        self.sendCompletePlayerList(playersocket,playersObject)
 
-	for s in read:
+    def removePlayer(self,playername,playersObject):
 
-		if s==serverSocket:								#new incoming connection request
-			clientSocket,clientAddress = serverSocket.accept()
-			clientName = clientSocket.recv(RECV_BUFFER)
-			if clientName in PlayersInQueue.keys(): 
-				# print "ERROR"
-				continue
-			
-			SocketsToTrack.append(clientSocket)
-			PlayersInQueue[clientName] = (clientSocket,clientAddress)
-			SendPlayerList(clientSocket)
+        self.SocketsToTrack.remove(playersObject.PlayersOnline[playername][0])
+        
+        for s in self.SocketsToTrack:
+            if s != self.serverSocket:
+                s.send("REMOVE+%s"%playername)
 
-			for s in SocketsToTrack:
-				if s != serverSocket and s != clientSocket:
-					s.send("ADD+%s"%clientName)
-					# print "SENDING NEW NAME"
+        del playersObject.PlayersOnline[playername]
 
-		else:
-			temp = s.recv(RECV_BUFFER)
-			
-			if temp.split('+')[0] == "EXIT":
-				SocketsToTrack.remove(PlayersInQueue[temp.split('+')[1]][0])
-				del PlayersInQueue[temp.split('+')[1]]
-				for socket in SocketsToTrack:
-					if socket != serverSocket:
-						socket.send("REMOVE+%s"%temp.split('+')[1])
-						# print "SENDING REMOVE"
-			
-			
-			elif temp.split('+')[0] == "CHALLENGE":
-				uid = time.time()
-				[user1,user2] = temp.split('+')[1:]
-				# print 11254
-				# print PlayersInQueue
-				PlayersInQueue[user1][0].sendall( "SERVER+%s+%s" % (PlayersInQueue[user2][1][0],str(uid)) )
-				# print 'SAGUASBGLUASBGLUIA'
-				time.sleep(1)
-				PlayersInQueue[user2][0].sendall( "CLIENT+%s+%s" % (PlayersInQueue[user1][1][0],str(uid)) )
-				
-				# del PlayersInQueue[user1]
-				# del PlayersInQueue[user2]
-				
-				# PlayersCurrentlyPlaying[user1] = (user2,str(uid))
-				# PlayersCurrentlyPlaying[user2] = (user1,str(uid))
+    def sendCompletePlayerList(self,socket,playersObject):
 
-serverSocket.close()
-exit()
+        a = "ADD+" + '+'.join(playersObject.PlayersOnline.keys())
+        socket.send(a)
+
+    def acceptNewPlayer(self,playersObject):
+        clientSocket,clientAddress = self.serverSocket.accept()
+        clientName = clientSocket.recv(RECV_BUFFER)
+        if clientName in playersObject.PlayersOnline.keys(): 
+            clientSocket.send("NAME_ERROR")
+            return 0
+        clientSocket.send("WELCOME")
+        if clientSocket.recv(RECV_BUFFER) == "READY":
+            self.addNewPlayer(clientName,clientSocket,clientAddress,playersObject)
+        else:
+            return 0
+        
+        return 1
+
+    def challengeRequest(self,player1,player2,playersObject):
+        self.uid = str(time.time())
+
+        self.socket1,self.socket2 = playersObject.PlayersOnline[player1][0],playersObject.PlayersOnline[player2][0]
+
+        self.socket1.send( "SERVER+%s+%s+%s" % (player2,playersObject.PlayersOnline[player2][1][0], self.uid) )
+
+        self.socket2.send( "CLIENT+%s+%s+%s" % (player1,playersObject.PlayersOnline[player1][1][0], self.uid) )
+
+        for s in self.SocketsToTrack:
+            if s != self.serverSocket and s != self.socket1 and s != self.socket2:
+                s.send("PLAYING+" + '+'.join([player1,player2]))
+
+        playersObject.PlayersCurrentlyPlaying[(player1,player2)] = (True,self.uid) 
+
+    def resultRequest(self,data,playersObject):
+        
+        print data
+        if data.split('+')[1] == "DRAW":
+            pass
+
+        elif data.split('+')[1] == "ERROR":
+            pass            
+
+        elif data.split('+')[1] == "VICTORY":
+            pass
+
+        elif data.split('+')[1] == "DEFEAT":
+            pass
+
+        print data
+
+        for s in self.SocketsToTrack:
+            if s != self.serverSocket:
+                s.send("ADD+" + data.split('+')[2])
+
+    def Serve(self,playersObject):
+
+        while 1:
+            read,write,error = select(self.SocketsToTrack,[],[],0.1)
+
+            for s in read:
+
+                #new incoming connection request
+                if s==self.serverSocket:
+                    self.acceptNewPlayer(playersObject)
+
+                #challenge or exit or GameOver request
+                else:
+                    temp = s.recv(RECV_BUFFER)  
+
+                    print temp
+
+                    if temp.split('+')[0] == "EXIT":
+                        self.removePlayer(temp.split('+')[1],playersObject)
+                    
+                    elif temp.split('+')[0] == "CHALLENGE":
+                        [self.user1,self.user2] = temp.split('+')[1:]
+                        self.challengeRequest(self.user1, self.user2, playersObject)
+
+                    elif temp.split('+')[0] == "RESULT":
+                        self.resultRequest(temp,playersObject)
+                time.sleep(0.2)
+
+    def exit_(self):
+        for s in self.SocketsToTrack:
+            s.close()
+        exit()
+
+def main():
+    playersData = PlayersState()
+    mainServer = Server(playersData)
+    mainServer.Serve(playersData)
+
+if __name__ == "__main__":
+    main()
