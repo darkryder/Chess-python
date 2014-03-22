@@ -16,7 +16,7 @@ from threading import Thread
 NAME = sys.argv[1]
 
 SERVER = '127.0.0.1'
-PORT = 2446
+PORT = 2445
 RECV_BUFFER = 8192
 
 
@@ -26,10 +26,11 @@ selfSocket.connect((SERVER, PORT))
 
 def getCleanData(sock):
     data = sock.recv(RECV_BUFFER)
+    # print data
     return list(data.strip().split('\n'))
 
 def sendCleanData(sock,data):
-    sock.send(data + '\n')
+    sock.sendall(data + '\n')
 
 
 gameProcess = None
@@ -46,35 +47,34 @@ elif verification == "WELCOME":
 
 else:
     exit(0)
- 
 
-class PlayersPane(QtGui.QWidget):
+class MainWindow(QtGui.QWidget):
 
-    def addPlayer(self,name):
+    def addPlayer(self,nameList):
+    	for name in nameList:
+	        try:
+	            a = self.playerNamesObjects[name]
+	            a[1].setEnabled(1)
+	            a[1].setText("Challenge !!")
+	            if name == NAME: 
+	                a[1].setText("<You>")
+	                a[1].setDisabled(1)
+	        except KeyError:
+	            
+	            self.playerName = QtGui.QLabel(name,self)
+	            self.playerName.setAlignment(QtCore.Qt.AlignCenter)
+	            self.mainGrid.addWidget(self.playerName,len(self.playerNamesObjects)+3,0,1,1)
 
-        try:
-            a = self.playerNamesObjects[name]
-            a[1].setEnabled(1)
-            a[1].setText("Challenge !!")
-            if name == NAME: 
-                a[1].setText("<You>")
-                a[1].setDisabled(1)
-        except KeyError:
-            
-            self.playerName = QtGui.QLabel(name,self)
-            self.playerName.setAlignment(QtCore.Qt.AlignCenter)
-            self.mainGrid.addWidget(self.playerName,len(self.playerNamesObjects)+3,0,1,1)
+	            self.challengeButton = QtGui.QPushButton("Challenge !!")
 
-            self.challengeButton = QtGui.QPushButton("Challenge !!")
+	            if name == NAME:
+	                self.challengeButton.setDisabled(1)
+	                self.challengeButton.setText("<You>")
+	            else:
+	                self.challengeButton.clicked.connect(partial(self.challenge, name))
 
-            if name == NAME:
-                self.challengeButton.setDisabled(1)
-                self.challengeButton.setText("<You>")
-            else:
-                self.challengeButton.clicked.connect(partial(self.challenge, name))
-
-            self.mainGrid.addWidget(self.challengeButton,len(self.playerNamesObjects)+3,2,1,2)            
-            self.playerNamesObjects[name] = (self.playerName,self.challengeButton)
+	            self.mainGrid.addWidget(self.challengeButton,len(self.playerNamesObjects)+3,2,1,2)            
+	            self.playerNamesObjects[name] = (self.playerName,self.challengeButton)
 
     def removePlayer(self,name):
         try:
@@ -92,23 +92,23 @@ class PlayersPane(QtGui.QWidget):
         data = gameProcess.stdout.read()        
         gameProcess = None
 
-        print "called"
+        # print "called"
 
         if "RESIGN" in data:
             sendCleanData(selfSocket,"RESULT+DEFEAT+%s" %(NAME))
-            print 1
+            # print 1
 
         elif "OPPONENT_SURRENDERED" in data:
             sendCleanData(selfSocket,"RESULT+VICTORY+%s"%NAME)
-            print 2
+            # print 2
         elif "CLEAN_EXIT" in data:
             sendCleanData(selfSocket,"RESULT+DRAW+%s"%NAME)
-            print 3
+            # print 3
         elif "OpponentNotAuthenticated" in data:
             sendCleanData(selfSocket,"RESULT+ERROR+%s"%NAME)
-            print 4
+            # print 4
         else:
-            print 5,data
+            print data
 
     def initNet(self):
         thread = CheckNewData()
@@ -116,7 +116,7 @@ class PlayersPane(QtGui.QWidget):
         self.connect(thread,thread.gameFinishedSignal,self.gameStatusChange)
         thread.start()
 
-    def PrintPlayersName(self,data):
+    def PrintPlayersName(self):
 
         self.PlayersHeadingLabel = QtGui.QLabel('Players Online',self)
         self.PlayersHeadingLabel.setAlignment(QtCore.Qt.AlignCenter)
@@ -128,9 +128,6 @@ class PlayersPane(QtGui.QWidget):
         self.mainVBox.addWidget(QtGui.QLabel('',self))
 
         self.mainVBox.addLayout(self.mainGrid)
-
-        for players in data.split('+')[1:]:
-            self.addPlayer(players)
 
     def changePlayerStatus(self,data):
         [user1,user2] = data.split('+')[1:]
@@ -164,7 +161,7 @@ class PlayersPane(QtGui.QWidget):
             print new
 
             if new.split('+')[0] == "ADD":
-                self.addPlayer(new.split('+')[1])
+                self.addPlayer(list(new.split('+')[1:]))
 
             elif new.split('+')[0] == "CLIENT":
                 self.startGameClient(new)
@@ -188,7 +185,7 @@ class PlayersPane(QtGui.QWidget):
         self.playerNamesObjects[user][1].setDisabled(1)
 
     def __init__(self):
-        super(PlayersPane,self).__init__()
+        super(MainWindow,self).__init__()
         self.playerNamesObjects = {}
         self.initUI()
         global gameProcess
@@ -206,8 +203,8 @@ class PlayersPane(QtGui.QWidget):
         self.setLayout(self.mainVBox)
 
 
-        data = getCleanData(selfSocket)[0]
-        self.PrintPlayersName(data)
+        # data = getCleanData(selfSocket)[0]
+        self.PrintPlayersName()
 
         self.show()
 
@@ -220,21 +217,21 @@ class CheckNewData(QtCore.QThread):
     def run(self):
         global gameProcess
         while 1:
-            r,w,x = select([selfSocket],[],[],0.001)
+            r,w,x = select([selfSocket],[],[],0.1)
             if r!=[]: self.emit(self.newDataSignal)
             if gameProcess:
                 if gameProcess.poll() == None:
                     pass
                 else:
                     self.emit(self.gameFinishedSignal)
-                    print "calling"
+                    # print "calling"
             sleep(0.1)
     
 
 
 def main():
 
-    ex = PlayersPane()
+    ex = MainWindow()
 
     QtCore.QTimer.singleShot(0,ex.initNet)
 

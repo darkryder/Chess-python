@@ -2,9 +2,9 @@ import socket
 import time
 from select import select
 
-PORT = 2446
+PORT = 2445
 NETWORK_REACH = '0.0.0.0'
-LISTEN_LIMIT = 50                       #Number of clients to handle
+LISTEN_LIMIT = 50                       #Number of clients to queue up
 RECV_BUFFER = 8192
 
 
@@ -31,7 +31,7 @@ class Server(object):
         return list(data.strip().split('\n'))
 
     def sendCleanData(self,sock,data):
-        sock.send(data + '\n')
+        sock.sendall(data + '\n')
 
 
     def addNewPlayer(self,playername,playersocket,playeraddress,playersObject):
@@ -90,7 +90,7 @@ class Server(object):
 
     def resultRequest(self,data,playersObject):
         
-        print data
+        # print data
         if data.split('+')[1] == "DRAW":
             pass
 
@@ -103,7 +103,7 @@ class Server(object):
         elif data.split('+')[1] == "DEFEAT":
             pass
 
-        print data
+        # print data
 
         for s in self.SocketsToTrack:
             if s != self.serverSocket:
@@ -111,8 +111,10 @@ class Server(object):
 
     def Serve(self,playersObject):
 
+        i = 0
+        t=int(time.time())
         while 1:
-            read,write,error = select(self.SocketsToTrack,[],[],0.1)
+            read,write,error = select(self.SocketsToTrack,[],[],0.01)
 
             for s in read:
 
@@ -124,7 +126,7 @@ class Server(object):
                 else:
                     tempData = self.getCleanData(s)  
                     for temp in tempData:
-                        print temp
+                        # print temp
 
                         if temp.split('+')[0] == "EXIT":
                             self.removePlayer(temp.split('+')[1],playersObject)
@@ -135,6 +137,11 @@ class Server(object):
 
                         elif temp.split('+')[0] == "RESULT":
                             self.resultRequest(temp,playersObject)
+            i+=1
+            if t!=int(time.time()):
+                print i
+                i = 0
+                t = int(time.time())
 
     def exit_(self):
         for s in self.SocketsToTrack:
