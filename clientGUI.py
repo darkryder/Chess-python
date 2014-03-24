@@ -16,7 +16,7 @@ from threading import Thread
 NAME = sys.argv[1]
 
 SERVER = '127.0.0.1'
-PORT = 2445
+PORT = 2440
 RECV_BUFFER = 8192
 
 
@@ -26,7 +26,6 @@ selfSocket.connect((SERVER, PORT))
 
 def getCleanData(sock):
     data = sock.recv(RECV_BUFFER)
-    # print data
     return list(data.strip().split('\n'))
 
 def sendCleanData(sock,data):
@@ -48,6 +47,26 @@ elif verification == "WELCOME":
 else:
     exit(0)
 
+
+
+class CenterPanel(QtGui.QMainWindow):
+
+	def __init__(self,playersRightPane):
+		super(CenterPanel,self).__init__()
+		self.setWindowTitle("Chess - IIITD")
+		self.setGeometry(100,100,600,600)
+		self.initGui(playersRightPane)
+		
+	def initGui(self,playersRightPane):
+		self.mainVBox = QtGui.QVBoxLayout()
+
+		self.show()
+		
+		pass
+
+	pass
+	
+
 class MainWindow(QtGui.QWidget):
 
     def addPlayer(self,nameList):
@@ -63,7 +82,7 @@ class MainWindow(QtGui.QWidget):
 	            
 	            self.playerName = QtGui.QLabel(name,self)
 	            self.playerName.setAlignment(QtCore.Qt.AlignCenter)
-	            self.mainGrid.addWidget(self.playerName,len(self.playerNamesObjects)+3,0,1,1)
+	            self.mainGrid.addWidget(self.playerName,len(self.playerNamesObjects),0,1,1)
 
 	            self.challengeButton = QtGui.QPushButton("Challenge !!")
 
@@ -73,16 +92,13 @@ class MainWindow(QtGui.QWidget):
 	            else:
 	                self.challengeButton.clicked.connect(partial(self.challenge, name))
 
-	            self.mainGrid.addWidget(self.challengeButton,len(self.playerNamesObjects)+3,2,1,2)            
+	            self.mainGrid.addWidget(self.challengeButton,len(self.playerNamesObjects),2,1,2)
 	            self.playerNamesObjects[name] = (self.playerName,self.challengeButton)
 
     def removePlayer(self,name):
         try:
             self.playerNamesObjects[name][1].setDisabled(1)
             self.playerNamesObjects[name][1].setText("Offline")
-            # self.playerNamesObjects[name][0].hide()
-            # self.playerNamesObjects[name][1].hide()
-            
             
         except KeyError:
             pass
@@ -193,7 +209,7 @@ class MainWindow(QtGui.QWidget):
         
     def initUI(self):
 
-        self.setWindowTitle("Chess-IIITD")
+        # self.setWindowTitle("Chess-IIITD")
 
         self.mainVBox = QtGui.QVBoxLayout()
 
@@ -226,8 +242,6 @@ class CheckNewData(QtCore.QThread):
                     self.emit(self.gameFinishedSignal)
                     # print "calling"
             sleep(0.1)
-    
-
 
 def main():
 

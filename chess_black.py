@@ -80,6 +80,7 @@ def quitGame(resign = False, opponent_resign = False):
         print "CLEANEXIT"
     
 
+
     clientSocket.close()
 
     # global pygame
