@@ -1,3 +1,5 @@
+Check the wiki [here](https://github.com/darkryder/Chess-python/wiki) where we'll try to get this project set up on your machine. :smile:
+
 #02.03.2014
 This is a major upheavel of the background processing required for the chess program, making the code cleaner and program more efficient, while helping me maitain my sanity. This does not inculde the console
 
