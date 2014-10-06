@@ -111,8 +111,8 @@ class Server(object):
 
     def Serve(self,playersObject):
 
-        i = 0
-        t=int(time.time())
+        # i = 0
+        # t=int(time.time())
         while 1:
             read,write,error = select(self.SocketsToTrack,[],[],0.01)
 
@@ -137,11 +137,11 @@ class Server(object):
 
                         elif temp.split('+')[0] == "RESULT":
                             self.resultRequest(temp,playersObject)
-            i+=1
-            if t!=int(time.time()):
-                print i
-                i = 0
-                t = int(time.time())
+            # i+=1
+            # if t!=int(time.time()):
+            #     print i
+            #     i = 0
+            #     t = int(time.time())
 
     def exit_(self):
         for s in self.SocketsToTrack:

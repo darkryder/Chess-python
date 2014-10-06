@@ -15,8 +15,12 @@ from threading import Thread
 
 NAME = sys.argv[1]
 
-SERVER = '127.0.0.1'
-PORT = 2440
+try:
+    SERVER = sys.argv[2]
+except:
+    SERVER = '127.0.0.1'
+
+PORT = 2445
 RECV_BUFFER = 8192
 
 

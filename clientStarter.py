@@ -9,5 +9,5 @@ while len(dic.keys()):
 		if dic[x].poll() == None:
 			pass
 		else:
-			print "test%d: "%x, dic[x].stdout.read()
+			# print "test%d: "%x, dic[x].stdout.read()
 			del dic[x]
